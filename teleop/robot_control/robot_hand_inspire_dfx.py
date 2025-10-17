@@ -16,7 +16,7 @@ Inspire_Num_Motors = 6
 kTopicInspireCommand = "rt/inspire/cmd"
 kTopicInspireState = "rt/inspire/state"
 
-class Inspire_Controller:
+class Inspire_Controller_DFX:
     def __init__(self, left_hand_array, right_hand_array, dual_hand_data_lock = None, dual_hand_state_array = None,
                        dual_hand_action_array = None, fps = 100.0, Unit_Test = False, simulation_mode = False):
         logger_mp.info("Initialize Inspire_Controller...")
