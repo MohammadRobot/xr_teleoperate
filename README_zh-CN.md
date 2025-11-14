@@ -63,8 +63,8 @@
 以下是系统示意图：
 
 <p align="center">
-  <a href="https://oss-global-cdn.unitree.com/static/46be5e94e7db4a699b92a8941b13a955_7120x5130.png">
-    <img src="https://oss-global-cdn.unitree.com/static/46be5e94e7db4a699b92a8941b13a955_7120x5130.png" alt="Watch the Document" style="width: 100%;">
+  <a href="https://oss-global-cdn.unitree.com/static/1804a35aa09a44a9bf9821fafc4a2348_3415x2465.png">
+    <img src="https://oss-global-cdn.unitree.com/static/1804a35aa09a44a9bf9821fafc4a2348_3415x2465.png" alt="Watch the Document" style="width: 75%;">
   </a>
 </p>
 

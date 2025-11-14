@@ -61,8 +61,8 @@ Additionally, the [Wiki of this repo](https://github.com/unitreerobotics/xr_tele
 Here are the required devices and wiring diagram,
 
 <p align="center">
-  <a href="https://oss-global-cdn.unitree.com/static/3f75e91e41694ed28c29bcad22954d1d_5990x4050.png">
-    <img src="https://oss-global-cdn.unitree.com/static/3f75e91e41694ed28c29bcad22954d1d_5990x4050.png" alt="System Diagram" style="width: 100%;">
+  <a href="https://oss-global-cdn.unitree.com/static/55fb9cd245854810889855010da296f7_3415x2465.png">
+    <img src="https://oss-global-cdn.unitree.com/static/55fb9cd245854810889855010da296f7_3415x2465.png" alt="System Diagram" style="width: 75%;">
   </a>
 </p>
 
