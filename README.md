@@ -215,22 +215,22 @@ build  cert.pem  key.pem  LICENSE  pyproject.toml  README.md  rootCA.key  rootCA
 |    ⚙️ Parameter    |                        📜 Description                         |                     🔘 Available Options                      |     📌 Default     |
 | :---------------: | :----------------------------------------------------------: | :----------------------------------------------------------: | :---------------: |
 |   `--frequency`   |            Set the FPS for recording and control             |                  Any reasonable float value                  |       30.0        |
-|  `--input-mode`   |       Choose XR input mode (how to control the robot)        | `hand` (**hand tracking**)`controller` (**controller tracking**) |      `hand`       |
+|  `--input-mode`   |       Choose XR input mode (how to control the robot)        | `hand` (hand tracking)`controller` (controller tracking) |      `hand`       |
 | `--display-mode`  |  Choose XR display mode (how to view the robot perspective)  | `immersive` (immersive)`ego` (pass-through + small first-person window)`pass-through` (pass-through only) |    `immersive`    |
-|      `--arm`      |      Select the robot arm type (see 0. 📖 Introduction)       |                   `G1_29``G1_23``H1_2``H1`                   |      `G1_29`      |
-|      `--ee`       | Select the end-effector type of the arm (see 0. 📖 Introduction) |       `dex1``dex3``inspire_ftp``inspire_dfx``brainco`        |       None        |
+|      `--arm`      |      Select the robot arm type (see 0. 📖 Introduction)       |                   `G1_29` `G1_23` `H1_2` `H1`                   |      `G1_29`      |
+|      `--ee`       | Select the end-effector type of the arm (see 0. 📖 Introduction) |       `dex1` `dex3` `inspire_ftp` `inspire_dfx` `brainco`        |       None        |
 | `--img-server-ip` | Set the image server IP address for receiving image streams and configuring WebRTC signaling |                        `IPv4` address                        | `192.168.123.164` |
 
 - **Mode switch parameters**
 
 | ⚙️ Parameter  |                        📜 Description                         |
 | :----------: | :----------------------------------------------------------: |
-|  `--motion`  | **Enable motion control mode**When enabled, the teleoperation program can run alongside the robot’s motion control program.In **hand tracking** mode, the [R3 controller](https://www.unitree.com/cn/R3) can be used to control normal robot walking; in **controller tracking** mode, joysticks can also control the robot’s movement. |
-| `--headless` | **Enable headless mode**For running the program on devices without a display, e.g., the Development Computing Unit (PC2). |
+|  `--motion`  | **Enable motion control mode** When enabled, the teleoperation program can run alongside the robot’s motion control program.In **hand tracking** mode, the [R3 controller](https://www.unitree.com/cn/R3) can be used to control normal robot walking; in **controller tracking** mode, joysticks can also control the robot’s movement. |
+| `--headless` | **Enable headless mode** For running the program on devices without a display, e.g., the Development Computing Unit (PC2). |
 |   `--sim`    | **Enable [simulation mode](https://github.com/unitreerobotics/unitree_sim_isaaclab)** |
-|   `--ipc`    | **Inter-process communication mode**Allows controlling the xr_teleoperate program’s state via IPC. Suitable for interaction with agent programs. |
-| `--affinity` | **CPU affinity mode**Set CPU core affinity. If you are unsure what this is, do not set it. |
-|  `--record`  | **Enable data recording mode**Press **r** to start teleoperation, then **s** to start recording; press **s** again to stop and save the episode. Press **s** repeatedly to repeat the process. |
+|   `--ipc`    | **Inter-process communication mode** Allows controlling the xr_teleoperate program’s state via IPC. Suitable for interaction with agent programs. |
+| `--affinity` | **CPU affinity mode** Set CPU core affinity. If you are unsure what this is, do not set it. |
+|  `--record`  | **Enable data recording mode** Press **r** to start teleoperation, then **s** to start recording; press **s** again to stop and save the episode. Press **s** repeatedly to repeat the process. |
 |  `--task-*`  | Configure the save path, target, description, and steps of the recorded task. |
 
 
@@ -289,7 +289,13 @@ Next steps:
 
    > **Note 1:** This IP is the address of **PC2**—the machine running teleimager service.  
    > **Note 2:** You may see a warning page like step 4. Click **Advanced**, then **Proceed to IP (unsafe)**. Once the page loads, press the **start** button in the top-left corner; if you see the head-camera preview, the check is successful.
-
+   >
+   > <p align="center">
+   >   <a href="https://oss-global-cdn.unitree.com/static/777f9c6f42d74eb2a6438d1509a73025_2475x1574.jpg">
+   >     <img src="https://oss-global-cdn.unitree.com/static/777f9c6f42d74eb2a6438d1509a73025_2475x1574.jpg" alt="webrtc_unsafe" style="width: 50%;">
+   >   </a>
+   > </p>
+   >
    > **Note 3:** This step serves two purposes:  
    >
    > 1. Verify that the teleimager service is running correctly.  
