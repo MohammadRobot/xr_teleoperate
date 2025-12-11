@@ -7,6 +7,8 @@ from enum import IntEnum
 import threading
 import time
 from multiprocessing import Process, Array
+from inspire_sdkpy import inspire_dds  # lazy import
+import inspire_sdkpy.inspire_hand_defaut as inspire_hand_default
 
 import logging_mp
 logger_mp = logging_mp.get_logger(__name__)
@@ -166,7 +168,8 @@ class Inspire_Controller_FTP:
     def __init__(self, left_hand_array, right_hand_array, dual_hand_data_lock = None, dual_hand_state_array = None,
                        dual_hand_action_array = None, fps = 100.0, Unit_Test = False, simulation_mode = False):
         logger_mp.info("Initialize Inspire_Controller_FTP...")
-        from inspire_sdkpy import inspire_dds, inspire_hand_defaut # lazy import
+        # from inspire_sdkpy import inspire_dds  # lazy import
+        # import inspire_sdkpy.inspire_hand_defaut as inspire_hand_default
         self.fps = fps
         self.Unit_Test = Unit_Test
         self.simulation_mode = simulation_mode
@@ -249,16 +252,24 @@ class Inspire_Controller_FTP:
         Send scaled angle commands [0-1000] to both hands.
         """
         # Left Hand Command
-        left_cmd_msg = inspire_hand_defaut.get_inspire_hand_ctrl()
+        left_cmd_msg = inspire_hand_default.get_inspire_hand_ctrl()
         left_cmd_msg.angle_set = left_angle_cmd_scaled
         left_cmd_msg.mode = 0b0001 # Mode 1: Angle control
         self.LeftHandCmd_publisher.Write(left_cmd_msg)
 
         # Right Hand Command
-        right_cmd_msg = inspire_hand_defaut.get_inspire_hand_ctrl()
+        right_cmd_msg = inspire_hand_default.get_inspire_hand_ctrl()
         right_cmd_msg.angle_set = right_angle_cmd_scaled
         right_cmd_msg.mode = 0b0001 # Mode 1: Angle control
         self.RightHandCmd_publisher.Write(right_cmd_msg)
+
+        # 临时打开前 N 次的 log
+        if not hasattr(self, "_debug_count"):
+            self._debug_count = 0
+        if self._debug_count < 50:
+            logger_mp.info(f"[Inspire_Controller_FTP] Publish cmd L={left_angle_cmd_scaled} R={right_angle_cmd_scaled} ")
+            self._debug_count += 1
+
 
     def control_process(self, left_hand_array, right_hand_array, left_hand_state_array, right_hand_state_array,
                               dual_hand_data_lock = None, dual_hand_state_array = None, dual_hand_action_array = None):
