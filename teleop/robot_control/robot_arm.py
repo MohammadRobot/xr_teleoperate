@@ -85,14 +85,20 @@ class G1_29_ArmController:
         else:
             self.lowcmd_publisher = ChannelPublisher(kTopicLowCommand_Debug, hg_LowCmd)
         self.lowcmd_publisher.Init()
-        self.lowstate_subscriber = ChannelSubscriber(kTopicLowState, hg_LowState)
-        self.lowstate_subscriber.Init()
         self.lowstate_buffer = DataBuffer()
 
-        # initialize subscribe thread
-        self.subscribe_thread = threading.Thread(target=self._subscribe_motor_state)
-        self.subscribe_thread.daemon = True
-        self.subscribe_thread.start()
+        def _lowstate_cb(msg):
+            if msg is None:
+                return
+            lowstate = G1_29_LowState()
+            for i in range(G1_29_Num_Motors):
+                lowstate.motor_state[i].q  = msg.motor_state[i].q
+                lowstate.motor_state[i].dq = msg.motor_state[i].dq
+            self.lowstate_buffer.SetData(lowstate)
+
+        self.lowstate_subscriber = ChannelSubscriber(kTopicLowState, hg_LowState)
+        self.lowstate_subscriber.Init(_lowstate_cb, 10)
+
 
         while not self.lowstate_buffer.GetData():
             time.sleep(0.1)
@@ -138,16 +144,6 @@ class G1_29_ArmController:
 
         logger_mp.info("Initialize G1_29_ArmController OK!")
 
-    def _subscribe_motor_state(self):
-        while True:
-            msg = self.lowstate_subscriber.Read()
-            if msg is not None:
-                lowstate = G1_29_LowState()
-                for id in range(G1_29_Num_Motors):
-                    lowstate.motor_state[id].q  = msg.motor_state[id].q
-                    lowstate.motor_state[id].dq = msg.motor_state[id].dq
-                self.lowstate_buffer.SetData(lowstate)
-            time.sleep(0.002)
 
     def clip_arm_q_target(self, target_q, velocity_limit):
         current_q = self.get_current_dual_arm_q()

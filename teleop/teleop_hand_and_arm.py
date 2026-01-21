@@ -12,7 +12,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
-from unitree_sdk2py.core.channel import ChannelFactoryInitialize # dds 
+from unitree_sdk2py.core.channel import ChannelFactoryInitialize, ChannelPublisher # dds 
 from televuer import TeleVuerWrapper
 from teleop.robot_control.robot_arm import G1_29_ArmController, G1_23_ArmController, H1_2_ArmController, H1_ArmController
 from teleop.robot_control.robot_arm_ik import G1_29_ArmIK, G1_23_ArmIK, H1_2_ArmIK, H1_ArmIK
@@ -23,7 +23,6 @@ from teleop.utils.motion_switcher import MotionSwitcher, LocoClientWrapper
 from sshkeyboard import listen_keyboard, stop_listening
 
 # for simulation
-from unitree_sdk2py.core.channel import ChannelPublisher
 from unitree_sdk2py.idl.std_msgs.msg.dds_ import String_
 def publish_reset_category(category: int, publisher): # Scene Reset signal
     msg = String_(data=str(category))
@@ -74,10 +73,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # basic control parameters
     parser.add_argument('--frequency', type = float, default = 30.0, help = 'control and record \'s frequency')
-    parser.add_argument('--input-mode', type=str, choices=['hand', 'controller'], default='hand', help='Select XR device input tracking source')
+    parser.add_argument('--input-mode', type=str, choices=['hand', 'controller'], default='controller', help='Select XR device input tracking source')
     parser.add_argument('--display-mode', type=str, choices=['immersive', 'ego', 'pass-through'], default='immersive', help='Select XR device display mode')
     parser.add_argument('--arm', type=str, choices=['G1_29', 'G1_23', 'H1_2', 'H1'], default='G1_29', help='Select arm controller')
-    parser.add_argument('--ee', type=str, choices=['dex1', 'dex3', 'inspire_ftp', 'inspire_dfx', 'brainco'], help='Select end effector controller')
+    parser.add_argument('--ee', type=str, choices=['dex1', 'dex3', 'inspire_ftp', 'inspire_dfx', 'brainco'], default='dex3', help='Select end effector controller')
     parser.add_argument('--img-server-ip', type=str, default='192.168.123.164', help='IP address of image server, used by teleimager and televuer')
     parser.add_argument('--network-interface', type=str, default=None, help='Network interface for dds communication, e.g., eth0, wlan0. If None, use default interface.')
     # mode flags
@@ -96,6 +95,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     logger_mp.info(f"args: {args}")
+
+    motion_switcher = None
+    loco_wrapper = None
 
     try:
         # setup dds communication domains id
@@ -139,9 +141,12 @@ if __name__ == '__main__':
             if args.input_mode == "controller":
                 loco_wrapper = LocoClientWrapper()
         else:
-            motion_switcher = MotionSwitcher()
-            status, result = motion_switcher.Enter_Debug_Mode()
-            logger_mp.info(f"Enter debug mode: {'Success' if status == 0 else 'Failed'}")
+            if args.sim:
+                logger_mp.info("Simulation mode: skip motion switcher debug mode.")
+            else:
+                motion_switcher = MotionSwitcher()
+                status, result = motion_switcher.Enter_Debug_Mode()
+                logger_mp.info(f"Enter debug mode: {'Success' if status == 0 else 'Failed'}")
 
         # arm
         if args.arm == "G1_29":
