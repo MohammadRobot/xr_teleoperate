@@ -8,6 +8,7 @@ from unitree_sdk2py.idl.unitree_go.msg.dds_ import MotorCmds_, MotorStates_     
 from unitree_sdk2py.idl.default import unitree_go_msg_dds__MotorCmd_
 
 import numpy as np
+import xml.etree.ElementTree as ET
 from enum import IntEnum
 import time
 import os
@@ -33,7 +34,9 @@ kTopicDex3RightState = "rt/dex3/right/state"
 
 class Dex3_1_Controller:
     def __init__(self, left_hand_array_in, right_hand_array_in, dual_hand_data_lock = None, dual_hand_state_array_out = None,
-                       dual_hand_action_array_out = None, fps = 100.0, Unit_Test = False, simulation_mode = False):
+                       dual_hand_action_array_out = None, fps = 100.0, Unit_Test = False, simulation_mode = False,
+                       manual_control = False, left_grip_value_in = None, right_grip_value_in = None,
+                       grip_inverted = False):
         """
         [note] A *_array type parameter requires using a multiprocessing Array, because it needs to be passed to the internal child process
 
@@ -58,6 +61,10 @@ class Dex3_1_Controller:
         self.fps = fps
         self.Unit_Test = Unit_Test
         self.simulation_mode = simulation_mode
+        self.manual_control = manual_control
+        self._left_grip_value_in = left_grip_value_in
+        self._right_grip_value_in = right_grip_value_in
+        self._grip_inverted = grip_inverted
         if not self.Unit_Test:
             self.hand_retargeting = HandRetargeting(HandType.UNITREE_DEX3)
         else:
@@ -89,6 +96,28 @@ class Dex3_1_Controller:
             time.sleep(0.01)
             logger_mp.warning("[Dex3_1_Controller] Waiting to subscribe dds...")
         logger_mp.info("[Dex3_1_Controller] Subscribe dds ok.")
+
+        if self.manual_control:
+            self._left_joint_names = [
+                "left_hand_thumb_0_joint",
+                "left_hand_thumb_1_joint",
+                "left_hand_thumb_2_joint",
+                "left_hand_middle_0_joint",
+                "left_hand_middle_1_joint",
+                "left_hand_index_0_joint",
+                "left_hand_index_1_joint",
+            ]
+            self._right_joint_names = [
+                "right_hand_thumb_0_joint",
+                "right_hand_thumb_1_joint",
+                "right_hand_thumb_2_joint",
+                "right_hand_middle_0_joint",
+                "right_hand_middle_1_joint",
+                "right_hand_index_0_joint",
+                "right_hand_index_1_joint",
+            ]
+            self._left_open, self._left_close = self._load_dex3_joint_targets(hand="left")
+            self._right_open, self._right_close = self._load_dex3_joint_targets(hand="right")
 
         hand_control_process = Process(target=self.control_process, args=(left_hand_array_in, right_hand_array_in,  self.left_hand_state_array, self.right_hand_state_array,
                                                                           dual_hand_data_lock, dual_hand_state_array_out, dual_hand_action_array_out))
@@ -174,21 +203,29 @@ class Dex3_1_Controller:
         try:
             while self.running:
                 start_time = time.time()
-                # get dual hand state
-                with left_hand_array_in.get_lock():
-                    left_hand_data  = np.array(left_hand_array_in[:]).reshape(25, 3).copy()
-                with right_hand_array_in.get_lock():
-                    right_hand_data = np.array(right_hand_array_in[:]).reshape(25, 3).copy()
+                if self.manual_control and self._left_grip_value_in is not None and self._right_grip_value_in is not None:
+                    with self._left_grip_value_in.get_lock():
+                        left_grip = float(self._left_grip_value_in.value)
+                    with self._right_grip_value_in.get_lock():
+                        right_grip = float(self._right_grip_value_in.value)
+                    left_q_target = self._interp_grip(left_grip, self._left_open, self._left_close)
+                    right_q_target = self._interp_grip(right_grip, self._right_open, self._right_close)
+                else:
+                    # get dual hand state
+                    with left_hand_array_in.get_lock():
+                        left_hand_data  = np.array(left_hand_array_in[:]).reshape(25, 3).copy()
+                    with right_hand_array_in.get_lock():
+                        right_hand_data = np.array(right_hand_array_in[:]).reshape(25, 3).copy()
+
+                    if not np.all(right_hand_data == 0.0) and not np.all(left_hand_data[4] == np.array([-1.13, 0.3, 0.15])): # if hand data has been initialized.
+                        ref_left_value = left_hand_data[self.hand_retargeting.left_indices[1,:]] - left_hand_data[self.hand_retargeting.left_indices[0,:]]
+                        ref_right_value = right_hand_data[self.hand_retargeting.right_indices[1,:]] - right_hand_data[self.hand_retargeting.right_indices[0,:]]
+
+                        left_q_target  = self.hand_retargeting.left_retargeting.retarget(ref_left_value)[self.hand_retargeting.right_dex_retargeting_to_hardware]
+                        right_q_target = self.hand_retargeting.right_retargeting.retarget(ref_right_value)[self.hand_retargeting.right_dex_retargeting_to_hardware]
 
                 # Read left and right q_state from shared arrays
                 state_data = np.concatenate((np.array(left_hand_state_array[:]), np.array(right_hand_state_array[:])))
-
-                if not np.all(right_hand_data == 0.0) and not np.all(left_hand_data[4] == np.array([-1.13, 0.3, 0.15])): # if hand data has been initialized.
-                    ref_left_value = left_hand_data[self.hand_retargeting.left_indices[1,:]] - left_hand_data[self.hand_retargeting.left_indices[0,:]]
-                    ref_right_value = right_hand_data[self.hand_retargeting.right_indices[1,:]] - right_hand_data[self.hand_retargeting.right_indices[0,:]]
-
-                    left_q_target  = self.hand_retargeting.left_retargeting.retarget(ref_left_value)[self.hand_retargeting.right_dex_retargeting_to_hardware]
-                    right_q_target = self.hand_retargeting.right_retargeting.retarget(ref_right_value)[self.hand_retargeting.right_dex_retargeting_to_hardware]
 
                 # get dual hand action
                 action_data = np.concatenate((left_q_target, right_q_target))    
@@ -204,6 +241,54 @@ class Dex3_1_Controller:
                 time.sleep(sleep_time)
         finally:
             logger_mp.info("Dex3_1_Controller has been closed.")
+
+    def _interp_grip(self, grip: float, open_vals: np.ndarray, close_vals: np.ndarray) -> np.ndarray:
+        grip = float(np.clip(grip, 0.0, 1.0))
+        if self._grip_inverted:
+            grip = 1.0 - grip
+        return open_vals + grip * (close_vals - open_vals)
+
+    def _load_dex3_joint_targets(self, hand: str) -> tuple[np.ndarray, np.ndarray]:
+        joint_names = self._left_joint_names if hand == "left" else self._right_joint_names
+        limits = self._load_dex3_joint_limits(hand)
+        open_vals = []
+        close_vals = []
+        for name in joint_names:
+            lower, upper = limits.get(name, (0.0, 0.0))
+            open_val = float(np.clip(0.0, lower, upper))
+            if upper > 0.0:
+                close_val = upper
+            else:
+                close_val = lower
+            close_val = float(np.clip(close_val, lower, upper))
+            open_vals.append(open_val)
+            close_vals.append(close_val)
+        return np.array(open_vals, dtype=np.float64), np.array(close_vals, dtype=np.float64)
+
+    def _load_dex3_joint_limits(self, hand: str) -> dict:
+        base_dir = os.path.join(parent2_dir, "assets", "unitree_hand")
+        if hand == "left":
+            urdf_path = os.path.join(base_dir, "unitree_dex3_left.urdf")
+        else:
+            urdf_path = os.path.join(base_dir, "unitree_dex3_right.urdf")
+        limits = {}
+        try:
+            tree = ET.parse(urdf_path)
+            root = tree.getroot()
+            for joint in root.findall("joint"):
+                name = joint.get("name")
+                limit = joint.find("limit")
+                if name is None or limit is None:
+                    continue
+                try:
+                    lower = float(limit.get("lower", "0"))
+                    upper = float(limit.get("upper", "0"))
+                except Exception:
+                    continue
+                limits[name] = (lower, upper)
+        except Exception as e:
+            logger_mp.warning(f"[Dex3_1_Controller] Failed to parse dex3 urdf limits: {e}")
+        return limits
 
 class Dex3_1_Left_JointIndex(IntEnum):
     kLeftHandThumb0 = 0
