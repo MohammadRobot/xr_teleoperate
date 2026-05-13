@@ -37,6 +37,9 @@ class LocoClientWrapper:
         self.client.Init()
 
     def Enter_Damp_Mode(self):
+        self.Damp()
+
+    def Damp(self):
         self.client.Damp()
     
     def Move(self, vx, vy, vyaw):

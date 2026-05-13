@@ -458,6 +458,99 @@ Please refer to the [Repo README](https://github.com/unitreerobotics/dex1_1_serv
 
 Same as simulation but follow the safety warnings above.
 
+### G1 + Quest 3 controller dry-run helper
+
+For a safer first physical check with **G1_29 + Dex3 + Meta Quest 3 controllers**, use the preflight helper before launching teleoperation. It validates the host network, Vuer certificates, Python imports, and G1 `rt/lowstate` DDS subscription without creating arm or hand command publishers.
+
+If you only want to test controller control first, skip the camera/image service and use Quest pass-through:
+
+```bash
+(tv) unitree@Host:~/xr_teleoperate/teleop$ export PYTHONNOUSERSITE=1
+(tv) unitree@Host:~/xr_teleoperate/teleop$ python g1_quest3_dry_run.py \
+  --interface eno1 \
+  --no-camera \
+  --skip-hands
+```
+
+Open the printed Quest 3 URL, for example:
+
+```text
+https://192.168.123.170:8012/?ws=wss://192.168.123.170:8012
+```
+
+After the dry-run passes and the robot area is clear, launch the no-camera controller test without hand control:
+
+```bash
+(tv) unitree@Host:~/xr_teleoperate/teleop$ python g1_quest3_dry_run.py \
+  --interface eno1 \
+  --no-camera \
+  --skip-hands \
+  --launch \
+  --operator-ready
+```
+
+This launches `teleop_hand_and_arm.py` with controller input, `--display-mode=pass-through`, `--motion`, `G1_29`, and `--ee=none`, so it does not wait for Dex3 hand DDS state. Press `r` on the host keyboard or left controller **Y/B** to start arm following. Press left **Y/B** again to pause or resume arm sync only; joystick walking/yaw remains active after teleop has started. Right controller **A** exits teleop, both joysticks pressed enters damping mode, the left joystick drives translation, and the right joystick controls yaw.
+
+When Dex3 state topics are available and you want finger control, remove `--skip-hands`:
+
+```bash
+(tv) unitree@Host:~/xr_teleoperate/teleop$ python g1_quest3_dry_run.py \
+  --interface eno1 \
+  --no-camera \
+  --launch \
+  --operator-ready
+```
+
+In controller + Dex3 mode, the trigger closes thumb + index for pinch, and the grip/squeeze button closes thumb + index + middle for a full-hand grasp. Both controls are continuous, so partial presses partially close the fingers. When a button is physically pressed, the affected Dex3 joints use higher stiffness: trigger boosts thumb + index, and grip boosts the whole hand.
+
+To adjust Dex3 controller-mode finger open/close positions, edit `assets/unitree_hand/dex3_controller_calibration.yml`. Values are normalized fractions over the existing URDF joint limits: `open: 0.0` and `close: 1.0` keep the default range, lowering `close` reduces how far a joint closes, and raising `open` makes the released joint rest slightly more closed. Tuning is per hand and per joint under `joints:`; values outside `[0.0, 1.0]` are clamped. Older per-finger keys (`thumb`, `index`, `middle`) still work if `joints:` is absent.
+
+If you want camera streaming later, run Tele Imager and use the image-server flow below.
+
+For local testing, run the image server on the host PC first. Use `--cf` once if you need to discover camera IDs, then update `teleop/teleimager/cam_config_server.yaml` before starting the server:
+
+```bash
+(tv) unitree@Host:~/xr_teleoperate/teleop$ export PYTHONNOUSERSITE=1
+(tv) unitree@Host:~/xr_teleoperate/teleop$ python run_local_image_server.py --cf
+(tv) unitree@Host:~/xr_teleoperate/teleop$ python run_local_image_server.py
+```
+
+If the host PC has no local camera attached, use the test-pattern server instead. It provides the same camera-config and WebRTC ports expected by teleop:
+
+```bash
+(tv) unitree@Host:~/xr_teleoperate/teleop$ export PYTHONNOUSERSITE=1
+(tv) unitree@Host:~/xr_teleoperate/teleop$ python run_test_image_server.py
+```
+
+In a second terminal, point the dry-run helper at the host PC image server:
+
+```bash
+(tv) unitree@Host:~/xr_teleoperate/teleop$ export PYTHONNOUSERSITE=1
+(tv) unitree@Host:~/xr_teleoperate/teleop$ python g1_quest3_dry_run.py \
+  --interface eno1 \
+  --local-image-server
+```
+
+If all checks pass, the helper prints the Quest 3 URL and the exact teleop command. Launch only when the robot area is clear and an operator is ready:
+
+```bash
+(tv) unitree@Host:~/xr_teleoperate/teleop$ python g1_quest3_dry_run.py \
+  --interface eno1 \
+  --local-image-server \
+  --launch \
+  --operator-ready
+```
+
+When moving the image server to robot PC2 later, keep the same launch flow but replace `--local-image-server` with the PC2 IP:
+
+```bash
+(tv) unitree@Host:~/xr_teleoperate/teleop$ python g1_quest3_dry_run.py \
+  --interface eno1 \
+  --img-server-ip 192.168.123.164
+```
+
+This launch uses controller input, `--motion`, `G1_29`, and `dex3`. Legs remain controlled by Unitree locomotion; this is not direct full-body joint teleoperation.
+
 ## 3.6 🔚 Exit
 
 > ![Warning](https://img.shields.io/badge/Warning-Important-red)

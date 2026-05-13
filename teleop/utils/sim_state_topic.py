@@ -13,8 +13,8 @@ from typing import Any, Dict, Optional
 from unitree_sdk2py.core.channel import ChannelSubscriber, ChannelFactoryInitialize
 from unitree_sdk2py.idl.std_msgs.msg.dds_ import String_
 
-import logging_mp
-logger_mp = logging_mp.getLogger(__name__)
+from teleop.utils.logging_compat import get_logger
+logger_mp = get_logger(__name__)
 
 
 class SharedMemoryManager:

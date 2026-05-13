@@ -2,8 +2,8 @@ from dex_retargeting import RetargetingConfig
 from pathlib import Path
 import yaml
 from enum import Enum
-import logging_mp
-logger_mp = logging_mp.getLogger(__name__)
+from teleop.utils.logging_compat import get_logger
+logger_mp = get_logger(__name__)
 
 class HandType(Enum):
     INSPIRE_HAND = "../assets/inspire_hand/inspire_hand.yml"

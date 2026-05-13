@@ -2,8 +2,8 @@ import os
 import zmq
 import time
 import threading
-import logging_mp
-logger_mp = logging_mp.getLogger(__name__)
+from teleop.utils.logging_compat import get_logger
+logger_mp = get_logger(__name__)
 
 """
 # Client → Server (Request)

@@ -189,8 +189,8 @@ if __name__ == "__main__":
     import gdown
     import zipfile
     import os
-    import logging_mp
-    logger_mp = logging_mp.getLogger(__name__)
+    from teleop.utils.logging_compat import get_logger
+    logger_mp = get_logger(__name__)
 
     zip_file = "rerun_testdata.zip"
     zip_file_download_url = "https://drive.google.com/file/d/1f5UuFl1z_gaByg_7jDRj1_NxfJZh2evD/view?usp=sharing"

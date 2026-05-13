@@ -8,8 +8,8 @@ from pinocchio.visualize import MeshcatVisualizer
 import os
 import sys
 import pickle
-import logging_mp
-logger_mp = logging_mp.getLogger(__name__)
+from teleop.utils.logging_compat import get_logger
+logger_mp = get_logger(__name__)
 parent2_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(parent2_dir)
 

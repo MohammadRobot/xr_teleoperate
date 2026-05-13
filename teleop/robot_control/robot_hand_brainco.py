@@ -9,8 +9,8 @@ import threading
 import time
 from multiprocessing import Process, Array
 
-import logging_mp
-logger_mp = logging_mp.getLogger(__name__)
+from teleop.utils.logging_compat import get_logger
+logger_mp = get_logger(__name__)
 
 brainco_Num_Motors = 6
 kTopicbraincoLeftCommand = "rt/brainco/left/cmd"
