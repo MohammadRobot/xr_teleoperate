@@ -91,12 +91,17 @@ if __name__ == '__main__':
     parser.add_argument('--task-goal', type = str, default = 'pick up cube.', help = 'task goal for recording at json file')
     parser.add_argument('--task-desc', type = str, default = 'task description', help = 'task description for recording at json file')
     parser.add_argument('--task-steps', type = str, default = 'step1: do this; step2: do that;', help = 'task steps for recording at json file')
+    parser.add_argument('--dex3-kp', type=float, default=0.8, help='Dex3 controller-mode normal position stiffness.')
+    parser.add_argument('--dex3-kp-boost', type=float, default=1.2, help='Dex3 controller-mode boosted position stiffness when trigger/grip is pressed.')
+    parser.add_argument('--dex3-kd', type=float, default=0.2, help='Dex3 controller-mode position damping.')
 
     args = parser.parse_args()
     if args.no_camera and args.display_mode != 'pass-through':
         parser.error('--no-camera requires --display-mode=pass-through because no image source is available.')
     if args.no_camera and args.record:
         parser.error('--no-camera cannot be used with --record because recording currently expects camera frames.')
+    if args.dex3_kp < 0.0 or args.dex3_kp_boost < 0.0 or args.dex3_kd < 0.0:
+        parser.error('--dex3-kp, --dex3-kp-boost, and --dex3-kd must be non-negative.')
     logger_mp.info(f"args: {args}")
 
     motion_switcher = None
@@ -234,7 +239,10 @@ if __name__ == '__main__':
                                               left_trigger_pressed_in=left_dex3_trigger_pressed,
                                               right_trigger_pressed_in=right_dex3_trigger_pressed,
                                               left_squeeze_pressed_in=left_dex3_squeeze_pressed,
-                                              right_squeeze_pressed_in=right_dex3_squeeze_pressed)
+                                              right_squeeze_pressed_in=right_dex3_squeeze_pressed,
+                                              manual_kp=args.dex3_kp,
+                                              manual_kp_boost=args.dex3_kp_boost,
+                                              manual_kd=args.dex3_kd)
             else:
                 hand_ctrl = Dex3_1_Controller(left_hand_pos_array, right_hand_pos_array, dual_hand_data_lock, 
                                               dual_hand_state_array, dual_hand_action_array, simulation_mode=args.sim)

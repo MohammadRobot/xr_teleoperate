@@ -501,9 +501,47 @@ When Dex3 state topics are available and you want finger control, remove `--skip
   --operator-ready
 ```
 
-In controller + Dex3 mode, the trigger closes thumb + index for pinch, and the grip/squeeze button closes thumb + index + middle for a full-hand grasp. Both controls are continuous, so partial presses partially close the fingers. When a button is physically pressed, the affected Dex3 joints use higher stiffness: trigger boosts thumb + index, and grip boosts the whole hand.
+In controller + Dex3 mode, the trigger closes thumb + index for pinch, and the grip/squeeze button closes thumb + index + middle for a full-hand grasp. If grip and trigger are both active, grip has priority and all joints follow the grip close target. Both controls are continuous, so partial presses partially close the fingers. To reduce hand motor heat, the default Dex3 stiffness is conservative: `--dex3-kp=0.8`, `--dex3-kp-boost=1.2`, and `--dex3-kd=0.2`. Lower `--dex3-kp-boost` if the fingers get hot during long holds; raise it only if the grasp is too weak.
 
-To adjust Dex3 controller-mode finger open/close positions, edit `assets/unitree_hand/dex3_controller_calibration.yml`. Values are normalized fractions over the existing URDF joint limits: `open: 0.0` and `close: 1.0` keep the default range, lowering `close` reduces how far a joint closes, and raising `open` makes the released joint rest slightly more closed. Tuning is per hand and per joint under `joints:`; values outside `[0.0, 1.0]` are clamped. Older per-finger keys (`thumb`, `index`, `middle`) still work if `joints:` is absent.
+Example lower-power launch:
+
+```bash
+(tv) unitree@Host:~/xr_teleoperate/teleop$ python g1_quest3_dry_run.py \
+  --interface eno1 \
+  --no-camera \
+  --launch \
+  --operator-ready \
+  --dex3-kp 0.6 \
+  --dex3-kp-boost 0.9
+```
+
+To adjust Dex3 controller-mode finger positions, edit `assets/unitree_hand/dex3_controller_calibration.yml`. Values are raw joint angles in radians: `open_rad`, `grip_close_rad`, and `trigger_close_rad`. The URDF files remain the physical/model joint-limit source; raw calibration values outside those limits are kept in YAML for clarity but clamped to URDF limits before commands are sent. Older normalized keys (`open`, `grip_close`, `trigger_close`, and `close`) still work if raw `*_rad` fields are absent.
+
+For teach calibration, stop teleop, manually move the Dex3 fingers to the desired pose, then capture the current DDS state into the YAML file:
+
+```bash
+(tv) unitree@Host:~/xr_teleoperate/teleop$ PYTHONNOUSERSITE=1 python calibrate_dex3_controller.py \
+  --interface eno1 \
+  --hand both \
+  --endpoint open
+```
+
+Repeat with `--endpoint grip_close` for the grip/squeeze target and `--endpoint trigger_close` for the trigger-pinch target. The helper subscribes only to `rt/dex3/left/state` and `rt/dex3/right/state`; it does not publish hand commands. It writes raw radian fields by default. Use `--dry-run` to preview raw and clamped command values without writing, and `-y` to skip the confirmation prompt.
+
+If the fingers cannot be moved by hand, use the guarded keyboard jog mode for one hand at a time. This mode publishes low-stiffness Dex3 commands, so keep teleop stopped and the hand clear:
+
+```bash
+(base) unitree@Host:~$ conda activate tv
+(tv) unitree@Host:~$ cd ~/xr_teleoperate/teleop
+(tv) unitree@Host:~/xr_teleoperate/teleop$ export PYTHONNOUSERSITE=1
+(tv) unitree@Host:~/xr_teleoperate/teleop$ python calibrate_dex3_controller.py \
+  --interface eno1 \
+  --hand left \
+  --endpoint grip_close \
+  --jog
+```
+
+In jog mode, press `1`-`7` to select a joint, `z`/`x` to step toward open/close, `a`/`d` to move by raw angle sign, `s` to save the measured pose, or `q` to quit without writing. Do not launch jog mode with `conda run`; it may not pass interactive keypresses through to the script.
 
 If you want camera streaming later, run Tele Imager and use the image-server flow below.
 

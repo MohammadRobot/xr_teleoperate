@@ -316,6 +316,9 @@ def build_teleop_command(args: argparse.Namespace) -> list[str]:
         "--display-mode=pass-through" if args.no_camera else "--display-mode=immersive",
         f"--network-interface={args.interface}",
         "--motion",
+        f"--dex3-kp={args.dex3_kp}",
+        f"--dex3-kp-boost={args.dex3_kp_boost}",
+        f"--dex3-kd={args.dex3_kd}",
     ]
     if args.no_camera:
         command.append("--no-camera")
@@ -354,6 +357,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--launch", action="store_true", help="Launch teleop after all checks pass.")
     parser.add_argument("--operator-ready", action="store_true", help="Required with --launch to acknowledge robot motion risk.")
     parser.add_argument("--frequency", type=float, default=30.0, help="Teleop frequency passed to teleop_hand_and_arm.py.")
+    parser.add_argument("--dex3-kp", type=float, default=0.8, help="Dex3 normal controller-mode position stiffness passed to teleop.")
+    parser.add_argument("--dex3-kp-boost", type=float, default=1.2, help="Dex3 boosted controller-mode position stiffness passed to teleop.")
+    parser.add_argument("--dex3-kd", type=float, default=0.2, help="Dex3 controller-mode damping passed to teleop.")
     parser.add_argument("--record", action="store_true", help="Pass --record to teleop.")
     parser.add_argument("--headless", action="store_true", help="Pass --headless to teleop.")
     args = parser.parse_args()
@@ -361,6 +367,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("--no-camera cannot be combined with --local-image-server.")
     if args.no_camera and args.record:
         parser.error("--no-camera cannot be combined with --record.")
+    if args.dex3_kp < 0.0 or args.dex3_kp_boost < 0.0 or args.dex3_kd < 0.0:
+        parser.error("--dex3-kp, --dex3-kp-boost, and --dex3-kd must be non-negative.")
     return args
 
 

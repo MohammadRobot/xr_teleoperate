@@ -1,18 +1,40 @@
 left:
   joints:
-    thumb_0: {open: 0.0, close: 1.0}
-    thumb_1: {open: 0.0, close: 1.0}
-    thumb_2: {open: 0.0, close: 1.0}
-    middle_0: {open: 0.0, close: 1.0}
-    middle_1: {open: 0.0, close: 1.0}
-    index_0: {open: 0.0, close: 1.0}
-    index_1: {open: 0.0, close: 1.0}
+    thumb_0: {open_rad: -0.0232, grip_close_rad: -0.0232, trigger_close_rad: -0.5017}
+    thumb_1: {open_rad: -0.5976, grip_close_rad: 0.9200, trigger_close_rad: 0.6811}
+    thumb_2: {open_rad: 0.000, grip_close_rad: 1.5220, trigger_close_rad: 0.4269}
+    index_0: {open_rad: 0.0000, grip_close_rad: -1.5708, trigger_close_rad: -1.1691}
+    index_1: {open_rad: 0.0000, grip_close_rad: -1.7453, trigger_close_rad: -0.8187}
+    middle_0: {open_rad: 0.000, grip_close_rad: -1.5708, trigger_close_rad: -0.0423}
+    middle_1: {open_rad: 0.000, grip_close_rad: -1.7453, trigger_close_rad: -0.0176}
+
 right:
   joints:
-    thumb_0: {open: 0.0, close: 1.0}
-    thumb_1: {open: 0.0, close: 1.0}
-    thumb_2: {open: 0.0, close: 1.0}
-    index_0: {open: 0.0, close: 1.0}
-    index_1: {open: 0.0, close: 1.0}
-    middle_0: {open: 0.0, close: 1.0}
-    middle_1: {open: 0.0, close: 1.0}
+    thumb_0: {open_rad: -0.0337, grip_close_rad: -0.0337, trigger_close_rad: -0.4464}
+    thumb_1: {open_rad: 0.5858, grip_close_rad: -0.9200, trigger_close_rad: -0.6811}
+    thumb_2: {open_rad: -0.0123, grip_close_rad: -1.6085, trigger_close_rad: -0.4277}
+    index_0: {open_rad: 0.0000, grip_close_rad: 1.5642, trigger_close_rad: 1.1691}
+    index_1: {open_rad: 0.0000, grip_close_rad: 1.7040, trigger_close_rad: 0.8187}
+    middle_0: {open_rad: 0.000, grip_close_rad: 1.5605, trigger_close_rad: 1.0382}
+    middle_1: {open_rad: 0.000, grip_close_rad: 1.6948, trigger_close_rad: 0.6663}
+
+
+# left:
+#   joints:
+#     thumb_0: {open_rad: -0.0232, grip_close_rad: -0.0232, trigger_close_rad: -0.5017}
+#     thumb_1: {open_rad: -0.5976, grip_close_rad: 0.9834, trigger_close_rad: 0.6811}
+#     thumb_2: {open_rad: -0.0535, grip_close_rad: 1.5220, trigger_close_rad: 0.4269}
+#     index_0: {open_rad: -0.0371, grip_close_rad: -1.6461, trigger_close_rad: -1.1691}
+#     index_1: {open_rad: -0.0120, grip_close_rad: -1.7904, trigger_close_rad: -0.8187}
+#     middle_0: {open_rad: -0.0423, grip_close_rad: -1.6698, trigger_close_rad: -0.0423}
+#     middle_1: {open_rad: -0.0176, grip_close_rad: -1.8074, trigger_close_rad: -0.0176}
+
+# right:
+#   joints:
+#     thumb_0: {open_rad: -0.0337, grip_close_rad: -0.0337, trigger_close_rad: -0.4464}
+#     thumb_1: {open_rad: 0.5858, grip_close_rad: -1.0353, trigger_close_rad: -0.6811}
+#     thumb_2: {open_rad: -0.0123, grip_close_rad: -1.6085, trigger_close_rad: -0.4277}
+#     index_0: {open_rad: -0.0138, grip_close_rad: 1.5642, trigger_close_rad: 1.1691}
+#     index_1: {open_rad: -0.0730, grip_close_rad: 1.7040, trigger_close_rad: 0.8187}
+#     middle_0: {open_rad: -0.0588, grip_close_rad: 1.5605, trigger_close_rad: 1.0382}
+#     middle_1: {open_rad: -0.0800, grip_close_rad: 1.6948, trigger_close_rad: 0.6663}

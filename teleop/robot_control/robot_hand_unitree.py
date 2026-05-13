@@ -40,7 +40,7 @@ class Dex3_1_Controller:
                        left_squeeze_value_in = None, right_squeeze_value_in = None,
                        left_trigger_pressed_in = None, right_trigger_pressed_in = None,
                        left_squeeze_pressed_in = None, right_squeeze_pressed_in = None,
-                       manual_deadzone = 0.05, manual_kp = 1.5, manual_kp_boost = 3.0, manual_kd = 0.2,
+                       manual_deadzone = 0.05, manual_kp = 0.8, manual_kp_boost = 1.2, manual_kd = 0.2,
                        controller_calibration_path = None):
         """
         [note] A *_array type parameter requires using a multiprocessing Array, because it needs to be passed to the internal child process
@@ -129,10 +129,10 @@ class Dex3_1_Controller:
                 "right_hand_thumb_0_joint",
                 "right_hand_thumb_1_joint",
                 "right_hand_thumb_2_joint",
-                "right_hand_index_0_joint",
-                "right_hand_index_1_joint",
                 "right_hand_middle_0_joint",
                 "right_hand_middle_1_joint",
+                "right_hand_index_0_joint",
+                "right_hand_index_1_joint",
             ]
             self._finger_joint_indices = {
                 "left": {
@@ -142,17 +142,19 @@ class Dex3_1_Controller:
                 },
                 "right": {
                     "thumb": [0, 1, 2],
-                    "index": [3, 4],
-                    "middle": [5, 6],
+                    "middle": [3, 4],
+                    "index": [5, 6],
                 },
             }
             self._joint_calibration_keys = {
                 "left": ["thumb_0", "thumb_1", "thumb_2", "middle_0", "middle_1", "index_0", "index_1"],
-                "right": ["thumb_0", "thumb_1", "thumb_2", "index_0", "index_1", "middle_0", "middle_1"],
+                "right": ["thumb_0", "thumb_1", "thumb_2", "middle_0", "middle_1", "index_0", "index_1"],
             }
             self._controller_calibration = self._load_dex3_controller_calibration(self._controller_calibration_path)
-            self._left_open, self._left_close = self._load_dex3_joint_targets(hand="left")
-            self._right_open, self._right_close = self._load_dex3_joint_targets(hand="right")
+            self._left_open, self._left_grip_close, self._left_trigger_close = self._load_dex3_joint_targets(hand="left")
+            self._right_open, self._right_grip_close, self._right_trigger_close = self._load_dex3_joint_targets(hand="right")
+            self._left_close = self._left_grip_close
+            self._right_close = self._right_grip_close
 
         hand_control_process = Process(target=self.control_process, args=(left_hand_array_in, right_hand_array_in,  self.left_hand_state_array, self.right_hand_state_array,
                                                                           dual_hand_data_lock, dual_hand_state_array_out, dual_hand_action_array_out))
@@ -341,30 +343,36 @@ class Dex3_1_Controller:
         )
 
     def _manual_grasp_target(self, hand: str, trigger: float, squeeze: float) -> np.ndarray:
-        pinch = max(trigger, squeeze)
-        power = squeeze
         if hand == "left":
             open_vals = self._left_open
-            close_vals = self._left_close
-            close_levels = np.array([pinch, pinch, pinch, power, power, pinch, pinch], dtype=np.float64)
+            grip_close_vals = self._left_grip_close
+            trigger_close_vals = self._left_trigger_close
+            trigger_mask = np.array([True, True, True, False, False, True, True], dtype=bool)
         else:
             open_vals = self._right_open
-            close_vals = self._right_close
-            close_levels = np.array([pinch, pinch, pinch, pinch, pinch, power, power], dtype=np.float64)
-        return open_vals + close_levels * (close_vals - open_vals)
+            grip_close_vals = self._right_grip_close
+            trigger_close_vals = self._right_trigger_close
+            trigger_mask = np.array([True, True, True, False, False, True, True], dtype=bool)
+        if squeeze > 0.0:
+            return open_vals + squeeze * (grip_close_vals - open_vals)
+        close_levels = np.zeros(Dex3_Num_Motors, dtype=np.float64)
+        close_levels[trigger_mask] = trigger
+        return open_vals + close_levels * (trigger_close_vals - open_vals)
 
     def _manual_boost_mask(self, hand: str, trigger_pressed: bool, squeeze_pressed: bool) -> np.ndarray:
         if squeeze_pressed:
             return np.ones(Dex3_Num_Motors, dtype=bool)
         if hand == "left":
             return np.array([trigger_pressed, trigger_pressed, trigger_pressed, False, False, trigger_pressed, trigger_pressed], dtype=bool)
-        return np.array([trigger_pressed, trigger_pressed, trigger_pressed, trigger_pressed, trigger_pressed, False, False], dtype=bool)
+        return np.array([trigger_pressed, trigger_pressed, trigger_pressed, False, False, trigger_pressed, trigger_pressed], dtype=bool)
 
-    def _load_dex3_joint_targets(self, hand: str) -> tuple[np.ndarray, np.ndarray]:
+    def _load_dex3_joint_targets(self, hand: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         joint_names = self._left_joint_names if hand == "left" else self._right_joint_names
         limits = self._load_dex3_joint_limits(hand)
         open_vals = []
         close_vals = []
+        lower_vals = []
+        upper_vals = []
         for name in joint_names:
             lower, upper = limits.get(name, (0.0, 0.0))
             open_val = float(np.clip(0.0, lower, upper))
@@ -375,40 +383,98 @@ class Dex3_1_Controller:
             close_val = float(np.clip(close_val, lower, upper))
             open_vals.append(open_val)
             close_vals.append(close_val)
+            lower_vals.append(lower)
+            upper_vals.append(upper)
         open_vals = np.array(open_vals, dtype=np.float64)
         close_vals = np.array(close_vals, dtype=np.float64)
-        return self._apply_dex3_controller_calibration(hand, open_vals, close_vals)
+        lower_vals = np.array(lower_vals, dtype=np.float64)
+        upper_vals = np.array(upper_vals, dtype=np.float64)
+        return self._apply_dex3_controller_calibration(hand, open_vals, close_vals, close_vals.copy(), lower_vals, upper_vals)
 
-    def _apply_dex3_controller_calibration(self, hand: str, open_vals: np.ndarray, close_vals: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    def _apply_dex3_controller_calibration(
+        self,
+        hand: str,
+        open_vals: np.ndarray,
+        grip_close_vals: np.ndarray,
+        trigger_close_vals: np.ndarray,
+        lower_vals: np.ndarray,
+        upper_vals: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         if not getattr(self, "_controller_calibration", None):
-            return open_vals, close_vals
+            return open_vals, grip_close_vals, trigger_close_vals
         calibrated_open = open_vals.copy()
-        calibrated_close = close_vals.copy()
+        calibrated_grip_close = grip_close_vals.copy()
+        calibrated_trigger_close = trigger_close_vals.copy()
         hand_config = self._controller_calibration.get(hand, {})
         joint_config = hand_config.get("joints")
         if isinstance(joint_config, dict):
             for idx, joint_key in enumerate(self._joint_calibration_keys[hand]):
-                endpoint_config = joint_config.get(joint_key, {"open": 0.0, "close": 1.0})
-                open_fraction = float(np.clip(endpoint_config.get("open", 0.0), 0.0, 1.0))
-                close_fraction = float(np.clip(endpoint_config.get("close", 1.0), 0.0, 1.0))
-                joint_range = close_vals[idx] - open_vals[idx]
-                calibrated_open[idx] = open_vals[idx] + open_fraction * joint_range
-                calibrated_close[idx] = open_vals[idx] + close_fraction * joint_range
-            return calibrated_open, calibrated_close
+                endpoint_config = joint_config.get(joint_key, {})
+                calibrated_open[idx] = self._dex3_endpoint_target(
+                    endpoint_config, "open", idx, open_vals, grip_close_vals, lower_vals, upper_vals, f"{hand}.joints.{joint_key}"
+                )
+                calibrated_grip_close[idx] = self._dex3_endpoint_target(
+                    endpoint_config, "grip_close", idx, open_vals, grip_close_vals, lower_vals, upper_vals, f"{hand}.joints.{joint_key}"
+                )
+                calibrated_trigger_close[idx] = self._dex3_endpoint_target(
+                    endpoint_config, "trigger_close", idx, open_vals, grip_close_vals, lower_vals, upper_vals, f"{hand}.joints.{joint_key}"
+                )
+            return calibrated_open, calibrated_grip_close, calibrated_trigger_close
         for finger, indices in self._finger_joint_indices[hand].items():
-            finger_config = hand_config.get(finger, {"open": 0.0, "close": 1.0})
-            open_fraction = float(np.clip(finger_config.get("open", 0.0), 0.0, 1.0))
-            close_fraction = float(np.clip(finger_config.get("close", 1.0), 0.0, 1.0))
+            finger_config = hand_config.get(finger, {})
             for idx in indices:
-                joint_range = close_vals[idx] - open_vals[idx]
-                calibrated_open[idx] = open_vals[idx] + open_fraction * joint_range
-                calibrated_close[idx] = open_vals[idx] + close_fraction * joint_range
-        return calibrated_open, calibrated_close
+                calibrated_open[idx] = self._dex3_endpoint_target(
+                    finger_config, "open", idx, open_vals, grip_close_vals, lower_vals, upper_vals, f"{hand}.{finger}"
+                )
+                calibrated_grip_close[idx] = self._dex3_endpoint_target(
+                    finger_config, "grip_close", idx, open_vals, grip_close_vals, lower_vals, upper_vals, f"{hand}.{finger}"
+                )
+                calibrated_trigger_close[idx] = self._dex3_endpoint_target(
+                    finger_config, "trigger_close", idx, open_vals, grip_close_vals, lower_vals, upper_vals, f"{hand}.{finger}"
+                )
+        return calibrated_open, calibrated_grip_close, calibrated_trigger_close
+
+    def _dex3_endpoint_target(
+        self,
+        endpoint_config: dict,
+        endpoint: str,
+        idx: int,
+        open_vals: np.ndarray,
+        close_vals: np.ndarray,
+        lower_vals: np.ndarray,
+        upper_vals: np.ndarray,
+        label: str,
+    ) -> float:
+        raw_key = f"{endpoint}_rad"
+        if raw_key in endpoint_config:
+            raw_value = float(endpoint_config[raw_key])
+            return self._clamp_dex3_raw_target(raw_value, lower_vals[idx], upper_vals[idx], f"{label}.{raw_key}")
+
+        if endpoint == "open":
+            fraction = endpoint_config.get("open", 0.0)
+        elif endpoint == "grip_close":
+            fraction = endpoint_config.get("grip_close", endpoint_config.get("close", 1.0))
+        elif endpoint == "trigger_close":
+            fraction = endpoint_config.get("trigger_close", endpoint_config.get("close", 1.0))
+        else:
+            raise ValueError(f"unknown Dex3 endpoint: {endpoint}")
+        fraction = float(np.clip(float(fraction), 0.0, 1.0))
+        target = open_vals[idx] + fraction * (close_vals[idx] - open_vals[idx])
+        return float(np.clip(target, lower_vals[idx], upper_vals[idx]))
+
+    def _clamp_dex3_raw_target(self, raw_value: float, lower: float, upper: float, label: str) -> float:
+        clamped_value = float(np.clip(raw_value, lower, upper))
+        if not np.isclose(raw_value, clamped_value, atol=1e-6):
+            logger_mp.warning(
+                f"[Dex3_1_Controller] {label}={raw_value:.4f} rad is outside URDF limits "
+                f"[{lower:.4f}, {upper:.4f}]; using {clamped_value:.4f} rad."
+            )
+        return clamped_value
 
     def _default_dex3_controller_calibration(self) -> dict:
         return {
             hand: {
-                finger: {"open": 0.0, "close": 1.0}
+                finger: {"open": 0.0, "grip_close": 1.0, "trigger_close": 1.0}
                 for finger in ("thumb", "index", "middle")
             }
             for hand in ("left", "right")
@@ -464,8 +530,17 @@ class Dex3_1_Controller:
             raise ValueError(f"{label} must be a mapping")
         return {
             "open": float(np.clip(float(endpoint_config.get("open", 0.0)), 0.0, 1.0)),
-            "close": float(np.clip(float(endpoint_config.get("close", 1.0)), 0.0, 1.0)),
+            "grip_close": float(np.clip(float(endpoint_config.get("grip_close", endpoint_config.get("close", 1.0))), 0.0, 1.0)),
+            "trigger_close": float(np.clip(float(endpoint_config.get("trigger_close", endpoint_config.get("close", 1.0))), 0.0, 1.0)),
+            **self._parse_dex3_raw_calibration_fields(endpoint_config),
         }
+
+    def _parse_dex3_raw_calibration_fields(self, endpoint_config) -> dict:
+        parsed = {}
+        for raw_key in ("open_rad", "grip_close_rad", "trigger_close_rad"):
+            if raw_key in endpoint_config:
+                parsed[raw_key] = float(endpoint_config[raw_key])
+        return parsed
 
     def _load_dex3_joint_limits(self, hand: str) -> dict:
         base_dir = os.path.join(parent2_dir, "assets", "unitree_hand")
@@ -505,10 +580,10 @@ class Dex3_1_Right_JointIndex(IntEnum):
     kRightHandThumb0 = 0
     kRightHandThumb1 = 1
     kRightHandThumb2 = 2
-    kRightHandIndex0 = 3
-    kRightHandIndex1 = 4
-    kRightHandMiddle0 = 5
-    kRightHandMiddle1 = 6
+    kRightHandMiddle0 = 3
+    kRightHandMiddle1 = 4
+    kRightHandIndex0 = 5
+    kRightHandIndex1 = 6
 
 
 kTopicGripperLeftCommand = "rt/dex1/left/cmd"
