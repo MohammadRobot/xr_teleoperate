@@ -1,0 +1,18 @@
+left:
+  joints:
+    thumb_0: {open: 0.0, grip_close: 1.0, trigger_close: 0.0}
+    thumb_1: {open: 0.0, grip_close: 1.0, trigger_close: 1.0}
+    thumb_2: {open: 0.0, grip_close: 1.0, trigger_close: 1.0}
+    middle_0: {open: 0.0, grip_close: 1.0, trigger_close: 1.0}
+    middle_1: {open: 0.0, grip_close: 1.0, trigger_close: 1.0}
+    index_0: {open: 0.0, grip_close: 1.0, trigger_close: 1.0}
+    index_1: {open: 0.0, grip_close: 1.0, trigger_close: 1.0}
+right:
+  joints:
+    thumb_0: {open: 0.0, grip_close: -1.0, trigger_close: 0.0}
+    thumb_1: {open: 0.0, grip_close: 1.0, trigger_close: 1.0}
+    thumb_2: {open: 0.0, grip_close: 1.0, trigger_close: 1.0}
+    index_0: {open: 0.0, grip_close: 1.0, trigger_close: 1.0}
+    index_1: {open: 0.0, grip_close: 1.0, trigger_close: 1.0}
+    middle_0: {open: 0.0, grip_close: 1.0, trigger_close: 1.0}
+    middle_1: {open: 0.0, grip_close: 1.0, trigger_close: 1.0}
