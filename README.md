@@ -543,7 +543,32 @@ If the fingers cannot be moved by hand, use the guarded keyboard jog mode for on
 
 In jog mode, press `1`-`7` to select a joint, `z`/`x` to step toward open/close, `a`/`d` to move by raw angle sign, `s` to save the measured pose, or `q` to quit without writing. Do not launch jog mode with `conda run`; it may not pass interactive keypresses through to the script.
 
-If you want camera streaming later, run Tele Imager and use the image-server flow below.
+If you want camera streaming later and the robot's built-in `videohub` camera is available, use the built-in G1 camera bridge first. It does not require changing camera wiring. Start the TeleImager-compatible bridge in one terminal:
+
+```bash
+(tv) unitree@Host:~/xr_teleoperate/teleop$ export PYTHONNOUSERSITE=1
+(tv) unitree@Host:~/xr_teleoperate/teleop$ python run_videohub_image_server.py \
+  --interface eno1 \
+  --fps 20 \
+  --max-width 1280 \
+  --save-preview /tmp/unitree_videohub_bridge.jpg
+```
+
+The bridge reads Unitree `videohub`, saves one preview frame if requested, serves camera config on `tcp://0.0.0.0:60000`, and publishes WebRTC on `https://0.0.0.0:60001/offer`. In a second terminal, launch teleop with an ego-view camera overlay:
+
+```bash
+(tv) unitree@Host:~/xr_teleoperate/teleop$ export PYTHONNOUSERSITE=1
+(tv) unitree@Host:~/xr_teleoperate/teleop$ python g1_quest3_dry_run.py \
+  --interface eno1 \
+  --local-image-server \
+  --display-mode ego \
+  --launch \
+  --operator-ready
+```
+
+If you need to test only the bridge without starting WebRTC, add `--preview-only` and check `/tmp/unitree_videohub_bridge.jpg`.
+
+If you want to use an external camera or a test pattern instead, run Tele Imager and use the image-server flow below.
 
 For local testing, run the image server on the host PC first. Use `--cf` once if you need to discover camera IDs, then update `teleop/teleimager/cam_config_server.yaml` before starting the server:
 

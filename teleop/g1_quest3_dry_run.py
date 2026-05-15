@@ -307,13 +307,14 @@ def check_dex3_state(interface: str, timeout_s: float, skip_hands: bool, skip_dd
 
 def build_teleop_command(args: argparse.Namespace) -> list[str]:
     end_effector = "none" if args.skip_hands else "dex3"
+    display_mode = args.display_mode or ("pass-through" if args.no_camera else "immersive")
     command = [
         sys.executable,
         "teleop_hand_and_arm.py",
         "--arm=G1_29",
         f"--ee={end_effector}",
         "--input-mode=controller",
-        "--display-mode=pass-through" if args.no_camera else "--display-mode=immersive",
+        f"--display-mode={display_mode}",
         f"--network-interface={args.interface}",
         "--motion",
         f"--dex3-kp={args.dex3_kp}",
@@ -340,6 +341,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--img-server-ip", default=None, help="Teleimager IP address. Defaults to PC2 192.168.123.164 unless --local-image-server is set.")
     parser.add_argument("--local-image-server", action="store_true", help="Use this host's interface IP as the teleimager server.")
     parser.add_argument("--no-camera", action="store_true", help="Skip Teleimager/WebRTC checks and launch teleop in pass-through controller mode.")
+    parser.add_argument("--display-mode", choices=["immersive", "ego", "pass-through"], default=None, help="Teleop display mode. Defaults to pass-through with --no-camera, otherwise immersive.")
     parser.add_argument("--skip-hands", action="store_true", help="Launch with --ee=none so arm/walking tests do not wait for Dex3 hand DDS state.")
     parser.add_argument("--img-request-port", type=int, default=60000, help="Teleimager config request port.")
     parser.add_argument("--img-timeout-ms", type=int, default=1000, help="Teleimager config timeout in milliseconds.")
@@ -367,6 +369,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("--no-camera cannot be combined with --local-image-server.")
     if args.no_camera and args.record:
         parser.error("--no-camera cannot be combined with --record.")
+    if args.no_camera and args.display_mode not in (None, "pass-through"):
+        parser.error("--no-camera requires --display-mode=pass-through.")
     if args.dex3_kp < 0.0 or args.dex3_kp_boost < 0.0 or args.dex3_kd < 0.0:
         parser.error("--dex3-kp, --dex3-kp-boost, and --dex3-kd must be non-negative.")
     return args
@@ -397,6 +401,8 @@ def main() -> int:
             print("  python run_local_image_server.py")
             print("If this PC has no local camera attached, use:")
             print("  python run_test_image_server.py")
+            print("For the built-in G1 videohub camera, use:")
+            print("  python run_videohub_image_server.py --interface eno1 --fps 20 --max-width 1280")
     elif args.img_server_ip is None:
         args.img_server_ip = "192.168.123.164"
         print_check("Image server selection", True, f"using PC2 image server at {args.img_server_ip}")
